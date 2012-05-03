@@ -1,0 +1,4 @@
+name = GeoIP Redirect
+description = Allows nodes to be redirected for select countries
+core = 6.x
+dependencies[] = geoip
