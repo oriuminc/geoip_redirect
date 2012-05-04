@@ -70,23 +70,35 @@ function geoip_redirect_form_alter(&$form, $form_state, $form_id) {
  * Implementation of hook_nodeapi()
  */
 function geoip_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+  // This looks pretty ugly but it works. The user from Canada will be redirected
+  // if doesn't have one of the allawed roles from the array bellow.
+  $types = variable_get('geoip_redirect_content_types', array());
+  $allawed_roles = array(101, 106, 111, 132, 121, 131);
+
+  if (in_array($node->type, $types)) {
+    $reuse_vars = TRUE;
+    global $user;
+    $rids = array_keys($user->roles);
+    $status = array_intersect($rids, $allawed_roles);
+    $q = 'SELECT * FROM {geoip_redirect_node} WHERE nid = %d';
+    $res = db_query($q, $node->nid);
+    $row = db_fetch_object($res);
+      $countries = $row->code;
+      $redirect_url = $row->redirect_url;
+      if ($countries && (empty($status))) {
+        drupal_goto($path = $redirect_url, $query = NULL, $fragment = NULL, $http_response_code = 303);
+      }
+  }
   switch ($op) {
     case 'load':
-      $types = variable_get('geoip_redirect_content_types', array());
-      if (in_array($node->type, $types)) {
-        $q = 'SELECT * FROM {geoip_redirect_node} WHERE nid = %d';
-        $res = db_query($q, $node->nid);
-        $row = db_fetch_object($res);
-          $countries = $row->code;
-          $redirect_url = $row->redirect_url;
+      if ($reuse_vars) {
         $node->countries = $countries;
         $node->redirect_url = $redirect_url;
       }
     break;
     case 'insert':
     case 'update':
-      $types = variable_get('geoip_redirect_content_types', array());
-      if (in_array($node->type, $types)) {
+      if ($reuse_vars) {
         if (!$node->countries) {
         $q = 'DELETE FROM {geoip_redirect_node} WHERE nid = %d';
         db_query($q, $node->nid);
@@ -103,19 +115,6 @@ function geoip_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
       }
     break;
     case 'view':
-      $types = variable_get('geoip_redirect_content_types', array());
-      if (in_array($node->type, $types)) {
-        global $user;
-        $q = 'SELECT * FROM {geoip_redirect_node} WHERE nid = %d';
-        $res = db_query($q, $node->nid);
-        $row = db_fetch_object($res);
-          $countries = $row->code;
-          $redirect_url = $row->redirect_url;
-          if ($countries && ($user->uid == 0)) {
-            drupal_set_message("We are sorry, but the page you are trying to access is not available from your location. You may want to try this page instead <a href='".$redirect_url."'>".$redirect_url."</a>");
-            unset($node->content);
-          }
-      }
     break;
     
   }
