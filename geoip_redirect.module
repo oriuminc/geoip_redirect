@@ -3,6 +3,15 @@
 /***************** hook functions ****************/
 
 /**
+ * Implementation of hook_perm().
+ */
+function geoip_redirect_perm() {
+  return array(
+    'see geoip page',
+  );
+}
+
+/**
  * Implementation of hook_menu().
  */
 function geoip_redirect_menu() {
@@ -70,10 +79,6 @@ function geoip_redirect_form_alter(&$form, $form_state, $form_id) {
  * Implementation of hook_nodeapi()
  */
 function geoip_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
-  // This looks pretty ugly but it works. The user from Canada will be redirected
-  // if doesn't have one of the allawed roles from the array bellow.
-  $types = variable_get('geoip_redirect_content_types', array());
-  $allawed_roles = array(101, 106, 111, 132, 121, 131);
 
   if (in_array($node->type, $types)) {
     $reuse_vars = TRUE;
@@ -85,10 +90,11 @@ function geoip_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
     $row = db_fetch_object($res);
       $countries = $row->code;
       $redirect_url = $row->redirect_url;
-      if ($countries && (empty($status))) {
+      if ($countries && !user_access('see geoip page')) {
         drupal_goto($path = $redirect_url, $query = NULL, $fragment = NULL, $http_response_code = 303);
       }
   }
+
   switch ($op) {
     case 'load':
       if ($reuse_vars) {
