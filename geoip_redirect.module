@@ -79,8 +79,10 @@ function geoip_redirect_form_alter(&$form, $form_state, $form_id) {
  * Implementation of hook_nodeapi()
  */
 function geoip_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+    // get country code by current user's IP
   $types = variable_get('geoip_redirect_content_types', array());
   if (in_array($node->type, $types)) {
+    $country = geoip_country_code();
     $reuse_vars = TRUE;
     global $user;
     $q = 'SELECT * FROM {geoip_redirect_node} WHERE nid = %d';
@@ -88,7 +90,7 @@ function geoip_redirect_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
     $row = db_fetch_object($res);
       $countries = $row->code;
       $redirect_url = $row->redirect_url;
-      if ($countries && !user_access('see geoip page')) {
+      if ((in_array($country, $countries)) && !user_access('see geoip page')) {
         drupal_goto($path = $redirect_url, $query = NULL, $fragment = NULL, $http_response_code = 303);
       }
   }
